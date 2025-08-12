@@ -1,13 +1,15 @@
 import { nextTick, ref } from 'vue'
-import { mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import dayjs from 'dayjs'
 import triggerEvent from '@element-plus/test-utils/trigger-event'
 import { ElFormItem } from '@element-plus/components/form'
 import DatePicker from '../src/date-picker'
+
 import type DatePickerRange from '../src/date-picker-com/panel-date-range.vue'
 import type { VueWrapper } from '@vue/test-utils'
 import type { VNode } from 'vue'
+import type { IDatePickerType } from '../src/date-picker.type'
 
 const formatStr = 'YYYY-MM-DD HH:mm:ss'
 const makeRange = (start: number, end: number) => {
@@ -387,6 +389,30 @@ describe('Datetime Picker', () => {
     expect(timeInput.value).toBe('13:00:00')
   })
 
+  it('inherit time across different picker view', async () => {
+    const value = ref(new Date(2000, 10, 8, 10, 10))
+    const wrapper = _mount(() => (
+      <DatePicker v-model={value.value} type="datetime" />
+    ))
+
+    const input = wrapper.find('input')
+    input.trigger('blur')
+    input.trigger('focus')
+    const headerPanel = document.querySelectorAll(
+      '.el-date-picker__header-label'
+    )
+    ;(headerPanel[1] as HTMLSpanElement).click()
+    await nextTick()
+    const firstMonth = document.querySelector(
+      '.el-month-table td'
+    ) as HTMLSpanElement
+    firstMonth.click()
+    const timeInput: HTMLInputElement = document.querySelector(
+      '.el-date-picker__time-header > span:nth-child(2) input'
+    )!
+    expect(timeInput.value).toBe('10:10:00')
+  })
+
   // fix #15196
   it('first click accuracy', async () => {
     const value = ref('')
@@ -431,6 +457,24 @@ describe('Datetime Picker', () => {
     expect(dayjs(value.value).format('YYYY-MM-DD HH:mm:ss')).toBe(
       '2023-10-01 12:01:03'
     )
+  })
+
+  it('shows weekNumber', async () => {
+    const value = ref('2025-01-01')
+    _mount(() => (
+      <DatePicker v-model={value.value} type="datetime" show-week-number />
+    ))
+    await nextTick()
+    const weeks = document.querySelectorAll('td.week')
+    expect(weeks.length).toBe(6)
+    expect([...weeks].map((x) => x.textContent?.trim())).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+    ])
   })
 })
 
@@ -910,5 +954,166 @@ describe('Datetimerange', () => {
     expect(dayjs(value.value).format('YYYY-MM-DD HH:mm:ss')).toStrictEqual(
       '2023-01-01 12:00:00'
     )
+  })
+
+  it('shows weekNumber', async () => {
+    const value = ref([new Date(2025, 0, 1), new Date(2025, 1, 1)])
+    const wrapper = _mount(() => (
+      <DatePicker v-model={value.value} type="datetimerange" show-week-number />
+    ))
+    const input = wrapper.find('input')
+    input.trigger('blur')
+    input.trigger('focus')
+
+    await nextTick()
+    const weeks = document.querySelectorAll('td.week')
+    expect(weeks.length).toBe(12)
+    expect([...weeks].map((x) => x.textContent?.trim())).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10',
+    ])
+  })
+
+  it('should emit update:model-value when two dates reached', async () => {
+    const value = ref<[Date, Date]>()
+    const onUpdateModelValue = vi.fn()
+    const wrapper = _mount(() => (
+      <DatePicker
+        v-model={value.value}
+        type="datetimerange"
+        onUpdate:modelValue={onUpdateModelValue}
+      />
+    ))
+    const input = wrapper.find('input')
+    await input.trigger('blur')
+    await input.trigger('focus')
+    const cells = document.querySelectorAll(
+      '.available .el-date-table-cell'
+    ) as unknown as HTMLElement[]
+    cells[0].click()
+    await nextTick()
+    cells[1].click()
+    await nextTick()
+
+    const rangePanelWrapper = wrapper.findComponent(
+      '.el-date-range-picker'
+    ) as VueWrapper<InstanceType<typeof DatePickerRange>>
+    expect(rangePanelWrapper.exists()).toBe(true)
+    expect(rangePanelWrapper.vm.visible).toBe(true)
+    expect(value.value).toHaveLength(2)
+    expect(onUpdateModelValue).toHaveBeenCalledOnce()
+    expect(onUpdateModelValue).toHaveBeenCalledWith(value.value)
+
+    await input.trigger('blur')
+    expect(rangePanelWrapper.vm.visible).toBe(false)
+  })
+
+  describe('should not have footer when show-footer is false', () => {
+    const footerAble: IDatePickerType[] = ['dates', 'datetime', 'datetimerange']
+    it.each(footerAble)(":type='%s'", async (t) => {
+      const showFooter = ref(true)
+      const type = ref<IDatePickerType>()
+      _mount(() => (
+        <DatePicker type={type.value} showFooter={showFooter.value} />
+      ))
+      type.value = t
+      showFooter.value = true
+      await nextTick()
+
+      expect(document.querySelector('.el-picker-panel__footer')).not.toBeNull()
+      showFooter.value = false
+      await nextTick()
+
+      expect(document.querySelector('.el-picker-panel__footer')).toBeNull()
+    })
+  })
+
+  it('should datetimerange visibility not be trapped by setting new values', async () => {
+    const values = ref(['2025-08-02', '2025-08-02'])
+    const spy = vi.fn()
+    const onChange = () => {
+      values.value = ['2025-08-02', '2025-08-02']
+      spy()
+    }
+    const wrapper = _mount(() => (
+      <DatePicker
+        v-model={values.value}
+        type="datetimerange"
+        valueFormat="YYYY-MM-DD"
+        //@ts-expect-error
+        onChange={onChange}
+      />
+    ))
+    const input = wrapper.find('input')
+    await input.trigger('blur')
+    await input.trigger('focus')
+
+    const rangePanelWrapper = wrapper.findComponent(
+      '.el-date-range-picker'
+    ) as VueWrapper<InstanceType<typeof DatePickerRange>>
+    expect(rangePanelWrapper.exists()).toBe(true)
+    expect(rangePanelWrapper.vm.visible).toBe(true)
+
+    const cells = document.querySelectorAll('.available .el-date-table-cell')
+    ;(cells[0] as HTMLElement).click()
+    await nextTick()
+    ;(cells[1] as HTMLElement).click()
+    await nextTick()
+
+    const button = document.querySelectorAll(
+      '.el-picker-panel__footer button'
+    )![1] as HTMLButtonElement
+    button.click()
+    await flushPromises()
+
+    expect(spy).toHaveBeenCalledOnce()
+    expect(rangePanelWrapper.vm.visible).toBe(false)
+  })
+  it('datetimerange should be reopen successfully', async () => {
+    const values = ref()
+    const wrapper = _mount(() => (
+      <DatePicker
+        v-model={values.value}
+        type="datetimerange"
+        valueFormat="YYYY-MM-DD"
+      />
+    ))
+    const rangePanelWrapper = wrapper.findComponent(
+      '.el-date-range-picker'
+    ) as VueWrapper<InstanceType<typeof DatePickerRange>>
+
+    expect(rangePanelWrapper.vm.visible).toBe(false)
+
+    const input = wrapper.find('input')
+    await input.trigger('blur')
+    await input.trigger('focus')
+
+    expect(rangePanelWrapper.exists()).toBe(true)
+    expect(rangePanelWrapper.vm.visible).toBe(true)
+
+    const cells = document.querySelectorAll('.available .el-date-table-cell')
+    ;(cells[0] as HTMLElement).click()
+    await nextTick()
+    ;(cells[1] as HTMLElement).click()
+    await nextTick()
+    const button = document.querySelectorAll(
+      '.el-picker-panel__footer button'
+    )![1] as HTMLButtonElement
+    button.click()
+    await nextTick()
+    expect(rangePanelWrapper.vm.visible).toBe(false)
+    await input.trigger('blur')
+    await input.trigger('focus')
+    expect(rangePanelWrapper.vm.visible).toBe(true)
   })
 })

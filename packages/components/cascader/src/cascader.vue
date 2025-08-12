@@ -10,7 +10,7 @@
     :gpu-acceleration="false"
     :placement="placement"
     :transition="`${nsCascader.namespace.value}-zoom-in-top`"
-    effect="light"
+    :effect="effect"
     pure
     :persistent="persistent"
     @hide="hideSuggestionPanel"
@@ -73,58 +73,62 @@
             nsCascader.is('validate', Boolean(validateState)),
           ]"
         >
-          <el-tag
-            v-for="tag in presentTags"
-            :key="tag.key"
-            :type="tagType"
-            :size="tagSize"
-            :effect="tagEffect"
-            :hit="tag.hitState"
-            :closable="tag.closable"
-            disable-transitions
-            @close="deleteTag(tag)"
-          >
-            <template v-if="tag.isCollapseTag === false">
-              <span>{{ tag.text }}</span>
-            </template>
-            <template v-else>
-              <el-tooltip
-                :disabled="popperVisible || !collapseTagsTooltip"
-                :fallback-placements="['bottom', 'top', 'right', 'left']"
-                placement="bottom"
-                effect="light"
-              >
-                <template #default>
-                  <span>{{ tag.text }}</span>
-                </template>
-                <template #content>
-                  <div :class="nsCascader.e('collapse-tags')">
-                    <div
-                      v-for="(tag2, idx) in allPresentTags.slice(
-                        maxCollapseTags
-                      )"
-                      :key="idx"
-                      :class="nsCascader.e('collapse-tag')"
-                    >
-                      <el-tag
-                        :key="tag2.key"
-                        class="in-tooltip"
-                        :type="tagType"
-                        :size="tagSize"
-                        :effect="tagEffect"
-                        :hit="tag2.hitState"
-                        :closable="tag2.closable"
-                        disable-transitions
-                        @close="deleteTag(tag2)"
-                      >
-                        <span>{{ tag2.text }}</span>
-                      </el-tag>
-                    </div>
-                  </div>
-                </template>
-              </el-tooltip>
-            </template>
-          </el-tag>
+          <slot name="tag" :data="allPresentTags" :delete-tag="deleteTag">
+            <el-tag
+              v-for="tag in presentTags"
+              :key="tag.key"
+              :type="tagType"
+              :size="tagSize"
+              :effect="tagEffect"
+              :hit="tag.hitState"
+              :closable="tag.closable"
+              disable-transitions
+              @close="deleteTag(tag)"
+            >
+              <template v-if="tag.isCollapseTag === false">
+                <span>{{ tag.text }}</span>
+              </template>
+              <template v-else>
+                <el-tooltip
+                  :disabled="popperVisible || !collapseTagsTooltip"
+                  :fallback-placements="['bottom', 'top', 'right', 'left']"
+                  placement="bottom"
+                  :effect="effect"
+                >
+                  <template #default>
+                    <span>{{ tag.text }}</span>
+                  </template>
+                  <template #content>
+                    <el-scrollbar :max-height="maxCollapseTagsTooltipHeight">
+                      <div :class="nsCascader.e('collapse-tags')">
+                        <div
+                          v-for="(tag2, idx) in allPresentTags.slice(
+                            maxCollapseTags
+                          )"
+                          :key="idx"
+                          :class="nsCascader.e('collapse-tag')"
+                        >
+                          <el-tag
+                            :key="tag2.key"
+                            class="in-tooltip"
+                            :type="tagType"
+                            :size="tagSize"
+                            :effect="tagEffect"
+                            :hit="tag2.hitState"
+                            :closable="tag2.closable"
+                            disable-transitions
+                            @close="deleteTag(tag2)"
+                          >
+                            <span>{{ tag2.text }}</span>
+                          </el-tag>
+                        </div>
+                      </div>
+                    </el-scrollbar>
+                  </template>
+                </el-tooltip>
+              </template>
+            </el-tag>
+          </slot>
           <input
             v-if="filterable && !isDisabled"
             v-model="searchInputValue"
@@ -145,6 +149,9 @@
     </template>
 
     <template #content>
+      <div v-if="$slots.header" :class="nsCascader.e('header')" @click.stop>
+        <slot name="header" />
+      </div>
       <el-cascader-panel
         v-show="!filtering"
         ref="cascaderPanelRef"
@@ -194,6 +201,9 @@
           </li>
         </slot>
       </el-scrollbar>
+      <div v-if="$slots.footer" :class="nsCascader.e('footer')" @click.stop>
+        <slot name="footer" />
+      </div>
     </template>
   </el-tooltip>
 </template>
@@ -249,10 +259,12 @@ const popperOptions: Partial<Options> = {
       name: 'arrowPosition',
       enabled: true,
       phase: 'main',
-      fn: ({ state }) => {
-        const { modifiersData, placement } = state as any
+      fn: ({ state }: any) => {
+        const { modifiersData, placement } = state
         if (['right', 'left', 'bottom', 'top'].includes(placement)) return
-        modifiersData.arrow.x = 35
+        if (modifiersData.arrow) {
+          modifiersData.arrow.x = 35
+        }
       },
       requires: ['arrow'],
     },
@@ -305,7 +317,7 @@ const cascaderStyle = computed<StyleValue>(() => {
 
 const isDisabled = computed(() => props.disabled || form?.disabled)
 const inputPlaceholder = computed(
-  () => props.placeholder || t('el.cascader.placeholder')
+  () => props.placeholder ?? t('el.cascader.placeholder')
 )
 const currentPlaceholder = computed(() =>
   searchInputValue.value || presentTags.value.length > 0 || isComposing.value
@@ -435,10 +447,27 @@ const deleteTag = (tag: Tag) => {
   emit('removeTag', node.valueByOption)
 }
 
+const getStrategyCheckedNodes = (): CascaderNode[] => {
+  switch (props.showCheckedStrategy) {
+    case 'child':
+      return checkedNodes.value
+    case 'parent': {
+      const clickedNodes = getCheckedNodes(false)
+      const clickedNodesValue = clickedNodes!.map((o) => o.value)
+      const parentNodes = clickedNodes!.filter(
+        (o) => !o.parent || !clickedNodesValue.includes(o.parent.value)
+      )
+      return parentNodes
+    }
+    default:
+      return []
+  }
+}
+
 const calculatePresentTags = () => {
   if (!multiple.value) return
 
-  const nodes = checkedNodes.value
+  const nodes = getStrategyCheckedNodes()
   const tags: Tag[] = []
 
   const allTags: Tag[] = []

@@ -7,12 +7,12 @@
     role="grid"
     @click="handlePickDate"
     @mousemove="handleMouseMove"
-    @mousedown.prevent="handleMouseDown"
+    @mousedown="handleMouseDown"
     @mouseup="handleMouseUp"
   >
     <tbody ref="tbodyRef">
       <tr>
-        <th v-if="showWeekNumber" scope="col">{{ weekLabel }}</th>
+        <th v-if="showWeekNumber" scope="col" :class="weekHeaderClass" />
         <th
           v-for="(week, key) in WEEKS"
           :key="key"
@@ -76,7 +76,7 @@ const {
   handleMouseMove,
   handleFocus,
 } = useBasicDateTable(props, emit)
-const { tableLabel, tableKls, weekLabel, getCellClasses, getRowKls, t } =
+const { tableLabel, tableKls, getCellClasses, getRowKls, weekHeaderClass, t } =
   useBasicDateTableDOM(props, {
     isCurrent,
     isWeekActive,

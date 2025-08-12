@@ -37,7 +37,6 @@
               size="small"
               :type="confirmButtonType === 'text' ? '' : confirmButtonType"
               :text="confirmButtonType === 'text'"
-              :loading="finalConfirmButtonLoading"
               @click="confirm"
             >
               {{ finalConfirmButtonText }}
@@ -53,7 +52,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, ref, unref } from 'vue'
 import ElButton from '@element-plus/components/button'
 import ElIcon from '@element-plus/components/icon'
 import ElTooltip from '@element-plus/components/tooltip'
@@ -73,7 +72,9 @@ const emit = defineEmits(popconfirmEmits)
 const { t } = useLocale()
 const ns = useNamespace('popconfirm')
 const tooltipRef = ref<TooltipInstance>()
-const confirmLoading = ref<boolean>(false)
+const popperRef = computed(() => {
+  return unref(tooltipRef)?.popperRef
+})
 
 const hidePopper = () => {
   tooltipRef.value?.onClose?.()
@@ -86,21 +87,8 @@ const style = computed(() => {
 })
 
 const confirm = (e: MouseEvent) => {
-  const done = () => {
-    // 当父组件未传递 loading 状态时自动关闭 loading
-    if (props.confirmButtonLoading === undefined) {
-      confirmLoading.value = false
-    }
-
-    hidePopper()
-  }
-
-  // 当父组件未传递 loading 状态时自动开启 loading
-  if (props.confirmButtonLoading === undefined) {
-    confirmLoading.value = true
-  }
-
-  emit('confirm', e, done)
+  emit('confirm', e)
+  hidePopper()
 }
 const cancel = (e: MouseEvent) => {
   emit('cancel', e)
@@ -114,9 +102,8 @@ const finalCancelButtonText = computed(
   () => props.cancelButtonText || t('el.popconfirm.cancelButtonText')
 )
 
-const finalConfirmButtonLoading = computed(() => {
-  return props.confirmButtonLoading !== undefined
-    ? props.confirmButtonLoading
-    : confirmLoading.value
+defineExpose({
+  popperRef,
+  hide: hidePopper,
 })
 </script>

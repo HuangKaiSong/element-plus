@@ -114,7 +114,10 @@ import { addUnit, ensureArray } from '@element-plus/utils'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { useId, useLocale, useNamespace } from '@element-plus/hooks'
 import { ElCollection as ElDropdownCollection, dropdownProps } from './dropdown'
-import { DROPDOWN_INJECTION_KEY } from './tokens'
+import {
+  DROPDOWN_INJECTION_KEY,
+  DROPDOWN_INSTANCE_INJECTION_KEY,
+} from './tokens'
 
 import type { TooltipInstance } from '@element-plus/components/tooltip'
 import type { CSSProperties } from 'vue'
@@ -218,7 +221,9 @@ export default defineComponent({
     }
 
     function onAutofocusTriggerEnter() {
-      triggeringElementRef.value?.$el?.focus()
+      triggeringElementRef.value?.$el?.focus({
+        preventScroll: true,
+      })
     }
 
     function onItemEnter() {
@@ -228,7 +233,10 @@ export default defineComponent({
     function onItemLeave() {
       const contentEl = unref(contentRef)
 
-      trigger.value.includes('hover') && contentEl?.focus()
+      trigger.value.includes('hover') &&
+        contentEl?.focus({
+          preventScroll: true,
+        })
       currentTabId.value = null
     }
 
@@ -266,7 +274,7 @@ export default defineComponent({
       onItemLeave,
     })
 
-    provide('elDropdown', {
+    provide(DROPDOWN_INSTANCE_INJECTION_KEY, {
       instance: _instance,
       dropdownSize,
       handleClick,

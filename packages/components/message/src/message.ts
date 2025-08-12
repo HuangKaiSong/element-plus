@@ -5,13 +5,27 @@ import {
   isClient,
   mutable,
 } from '@element-plus/utils'
-import type { AppContext, ExtractPropTypes, VNode } from 'vue'
+
+import type {
+  AppContext,
+  ExtractPropTypes,
+  VNode,
+  __ExtractPublicPropTypes,
+} from 'vue'
 import type { Mutable } from '@element-plus/utils'
 import type MessageConstructor from './message.vue'
 
-export const messageTypes = ['success', 'info', 'warning', 'error'] as const
+export const messageTypes = [
+  'primary',
+  'success',
+  'info',
+  'warning',
+  'error',
+] as const
 
-export type messageType = typeof messageTypes[number]
+export type MessageType = typeof messageTypes[number]
+/** @deprecated please use `MessageType` instead */
+export type messageType = MessageType // will be removed in 3.0.0.
 
 export interface MessageConfigContext {
   max?: number
@@ -19,6 +33,7 @@ export interface MessageConfigContext {
   duration?: number
   offset?: number
   showClose?: boolean
+  plain?: boolean
 }
 
 export const messageDefaults = mutable({
@@ -145,6 +160,7 @@ export const messageProps = buildProps({
   },
 } as const)
 export type MessageProps = ExtractPropTypes<typeof messageProps>
+export type MessagePropsPublic = __ExtractPublicPropTypes<typeof messageProps>
 
 export const messageEmits = {
   destroy: () => true,
@@ -181,7 +197,7 @@ export interface MessageHandler {
 
 export type MessageFn = {
   (options?: MessageParams, appContext?: null | AppContext): MessageHandler
-  closeAll(type?: messageType): void
+  closeAll(type?: MessageType): void
 }
 export type MessageTypedFn = (
   options?: MessageParamsWithType,
@@ -189,5 +205,9 @@ export type MessageTypedFn = (
 ) => MessageHandler
 
 export type Message = MessageFn & {
-  [K in messageType]: MessageTypedFn
+  primary: MessageTypedFn
+  success: MessageTypedFn
+  warning: MessageTypedFn
+  info: MessageTypedFn
+  error: MessageTypedFn
 }

@@ -80,9 +80,8 @@
                       :is="showInput ? 'label' : 'p'"
                       v-if="!dangerouslyUseHTMLString"
                       :for="showInput ? inputId : undefined"
-                    >
-                      {{ !dangerouslyUseHTMLString ? message : '' }}
-                    </component>
+                      v-text="message"
+                    />
                     <component
                       :is="showInput ? 'label' : 'p'"
                       v-else
@@ -238,10 +237,7 @@ export default defineComponent({
     center: Boolean,
     draggable: Boolean,
     overflow: Boolean,
-    roundButton: {
-      default: false,
-      type: Boolean,
-    },
+    roundButton: Boolean,
     container: {
       type: String, // default append to body
       default: 'body',
@@ -472,7 +468,7 @@ export default defineComponent({
     // any other message box and close any other dialog-ish elements
     // e.g. Dialog has a close on press esc feature, and when it closes, it calls
     // props.beforeClose method to make a intermediate state by callout a message box
-    // for some verification or alerting. then if we allow global event liek this
+    // for some verification or alerting. then if we allow global event like this
     // to dispatch, it could callout another message box.
     const onCloseRequested = () => {
       if (props.closeOnPressEscape) {

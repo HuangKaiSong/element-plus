@@ -22,7 +22,7 @@ import type {
   MessageOptions,
   MessageParams,
   MessageParamsNormalized,
-  messageType,
+  MessageType,
 } from './message'
 
 let seed = 1
@@ -71,6 +71,9 @@ const normalizeOptions = (params?: MessageParams) => {
   }
   if (isBoolean(messageConfig.showClose) && !normalized.showClose) {
     normalized.showClose = messageConfig.showClose
+  }
+  if (isBoolean(messageConfig.plain) && !normalized.plain) {
+    normalized.plain = messageConfig.plain
   }
 
   return normalized as MessageParamsNormalized
@@ -187,7 +190,7 @@ messageTypes.forEach((type) => {
   }
 })
 
-export function closeAll(type?: messageType): void {
+export function closeAll(type?: MessageType): void {
   // Create a copy of instances to avoid modification during iteration
   const instancesToClose = [...instances]
 

@@ -11,6 +11,7 @@ import { camelize } from '../strings'
 import { isArray } from '../types'
 import { hasOwn } from '../objects'
 import { debugWarn } from '../error'
+
 import type {
   VNode,
   VNodeArrayChildren,
@@ -168,4 +169,22 @@ export const flattedChildren = (
     }
   })
   return result
+}
+
+// Copyied from https://github.com/vuejs/core/blob/c875019d49b4c36a88d929ccadc31ad414747c7b/packages/runtime-core/src/helpers/renderSlot.ts#L102
+export function ensureValidVNode(
+  vnodes: VNodeArrayChildren
+): VNodeArrayChildren | null {
+  return vnodes.some((child) => {
+    if (!isVNode(child)) return true
+    if (child.type === Comment) return false
+    if (
+      child.type === Fragment &&
+      !ensureValidVNode(child.children as VNodeArrayChildren)
+    )
+      return false
+    return true
+  })
+    ? vnodes
+    : null
 }

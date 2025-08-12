@@ -23,17 +23,24 @@ tree-select/basic
 When using the `check-strictly=true` attribute, any node can be checked,
 otherwise only leaf nodes are supported.
 
+:::tip
+
+When using `show-checkbox`, since `check-on-click-node` is false by default,
+it can only be selected by checking, you can set it to true,
+and then click the node to select.
+
+:::
+
 :::demo
 
 tree-select/check-strictly
 
 :::
 
-:::tip
+:::warning
 
-When using `show-checkbox`, since `check-on-click-node` is false by default,
-it can only be selected by checking, you can set it to true,
-and then click the node to select.
+When using show-checkbox, since `check-on-click-leaf` is true by default,
+last tree children's can be checked by clicking their nodes.
 
 :::
 
@@ -104,9 +111,9 @@ and please go to the original component to view the documentation.
 
 #### Own Attributes
 
-| Name                | Description                                                                                                         | Type                     | Default |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------- |
-| cacheData ^(2.2.26) | The cached data of the lazy node, the structure is the same as the data, used to get the label of the unloaded data | ^[object]`CacheOption[]` | []      |
+| Name                 | Description                                                                                                         | Type                     | Default |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------- |
+| cache-data ^(2.2.26) | The cached data of the lazy node, the structure is the same as the data, used to get the label of the unloaded data | ^[object]`CacheOption[]` | []      |
 
 ## Type Declarations
 
